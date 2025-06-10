@@ -44,7 +44,7 @@ app.post("/api/add-query", async (req, res) => {
         const { queryData } = req.body;
         const result = await queriesCollection.insertOne(queryData);
         if(!queryData){
-            res.status(400).send({message:"Bad Request, No queryData found"})
+            res.status(400).send({message:"Bad Request, No queryData found"});
         }
         res.status(201).send({message: "Query Inserted",insertedId: result.insertedId,});
     } catch (err) {
@@ -55,13 +55,28 @@ app.post("/api/add-query", async (req, res) => {
 
 app.get("/api/queries",async(req,res)=>{
     try {
-        const query = await queriesCollection.find().toArray();
-        res.send(query)
+        const query = await queriesCollection.find({}).toArray();
+        res.send(query);
     } catch (err) {
         console.error(err);
-        res.status(500).send({message:"Internel Server Error"})
+        res.status(500).send({message:"Internel Server Error"});
     }
     
+})
+
+app.get("/api/my-queries",async(req,res)=>{
+    const {email} = req.query;
+    if(!email){
+        return res.status(400).send({message:"Email query required"});
+    }
+
+    try {
+        const myQueries = await queriesCollection.find({userEmail:email}).toArray();
+        res.send(myQueries);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({message:"Internel Server Error"});
+    }
 })
 
 app.listen(port, () => {
