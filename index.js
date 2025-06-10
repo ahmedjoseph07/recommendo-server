@@ -38,7 +38,8 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.post("/api/queries", async (req, res) => {
+
+app.post("/api/add-query", async (req, res) => {
     try {
         const { queryData } = req.body;
         const result = await queriesCollection.insertOne(queryData);
@@ -51,6 +52,17 @@ app.post("/api/queries", async (req, res) => {
         res.status(500).send({ message: "Internal Server Error" });
     }
 });
+
+app.get("/api/queries",async(req,res)=>{
+    try {
+        const query = await queriesCollection.find().toArray();
+        res.send(query)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({message:"Internel Server Error"})
+    }
+    
+})
 
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
