@@ -11,7 +11,7 @@ app.get("/", (req, res) => {
     res.send({ message: "Welcome to Recommendo Server" });
 });
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const client = new MongoClient(process.env.MONGODB_URI, {
     serverApi: {
@@ -44,7 +44,7 @@ app.post("/api/add-query", async (req, res) => {
         const { queryData } = req.body;
         const result = await queriesCollection.insertOne(queryData);
         if(!queryData){
-            res.status(400).send({message:"Bad Request, No queryData found"});
+            res.status(400).send({message:"No queryData found"});
         }
         res.status(201).send({message: "Query Inserted",insertedId: result.insertedId,});
     } catch (err) {
@@ -76,6 +76,20 @@ app.get("/api/my-queries",async(req,res)=>{
     } catch (err) {
         console.error(err);
         res.status(500).send({message:"Internel Server Error"});
+    }
+})
+
+app.get("/api/update/:id",async(req,res)=>{
+    const {id} = req.params;
+    try {
+        const query = await queriesCollection.findOne({_id: new ObjectId(id)});
+        if(!query){
+            return res.status(404).send({ message: "Query not found" })
+        }
+        res.send(query);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({message:"Internel Server Error"})
     }
 })
 
