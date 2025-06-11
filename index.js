@@ -100,6 +100,22 @@ app.get("/api/update/:id", async (req, res) => {
     }
 });
 
+app.get("/api/query/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        const query = await queriesCollection.findOne({
+            _id: new ObjectId(id),
+        });
+        if (!query) {
+            return res.status(404).send({ message: "Query not found" });
+        }
+        res.send(query);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Internel Server Error" });
+    }
+});
+
 app.put("/api/update/:id", async (req, res) => {
     const { id } = req.params;
     const { updatedQuery } = req.body;
@@ -151,6 +167,18 @@ app.post("/api/add-recommendation",async(req,res)=>{
     } catch (err) {
         console.error(err)
         res.status(500).send({ message: "Internal Server Error" });
+    }
+})
+
+app.get("/api/recommendations/:queryId",async(req,res)=>{
+    const {queryId} = req.params;
+    console.log(queryId);
+    try {
+        const result  = await recommendationCollection.find({queryId}).toArray();
+        res.send(result)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({message: "Internal Server Error"});
     }
 })
 
