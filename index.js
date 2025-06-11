@@ -179,7 +179,6 @@ app.post("/api/add-recommendation", async (req, res) => {
 
 app.get("/api/recommendations/:queryId", async (req, res) => {
     const { queryId } = req.params;
-    console.log(queryId);
     try {
         const result = await recommendationCollection
             .find({ queryId })
@@ -223,6 +222,34 @@ app.delete("/api/delete-rec/:id/:queryId", async(req, res) => {
         res.status(500).send({ message: "Internal Server Error" });
     }
 });
+
+app.get("/api/recommended",async(req,res)=>{
+    const {userEmail} = req.query;
+    if(!userEmail){
+        return res.status(400).send({message:"User Email Not Found"})
+    }
+    try {
+        const userQueries = await queriesCollection.find({userEmail}).toArray();
+
+        const results = await Promise.all(
+            userQueries.map(async(query)=>{
+                const recommendations = await recommendationCollection.find({queryId:query._id.toString()}).toArray();
+                return {
+                    queryTitle: query.queryTitle,
+                    productName: query.productName,
+                    productBrand: query.productBrand,
+                    queryId: query._id,
+                    recommendations,
+                }
+            })
+        );
+        res.send(results);
+        
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({message: "Internal Server Error"});
+    }
+})
 
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
