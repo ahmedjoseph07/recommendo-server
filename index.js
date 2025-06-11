@@ -43,8 +43,8 @@ run().catch(console.dir);
 app.post("/api/add-query", async (req, res) => {
     const { queryData } = req.body;
     if (!queryData) {
-            res.status(400).send({ message: "No queryData found" });
-        }
+        res.status(400).send({ message: "No queryData found" });
+    }
     try {
         const result = await queriesCollection.insertOne(queryData);
         res.status(201).send({
@@ -135,65 +135,94 @@ app.put("/api/update/:id", async (req, res) => {
     }
 });
 
-app.delete("/api/delete/:id",async(req,res)=>{
-    const {id} = req.params;
+app.delete("/api/delete/:id", async (req, res) => {
+    const { id } = req.params;
 
     try {
-        const result = await queriesCollection.deleteOne({_id: new ObjectId(id)});
-        if(result.deletedCount === 0){
-            return res.status(404).send({ message: "Query not found or already deleted" });
+        const result = await queriesCollection.deleteOne({
+            _id: new ObjectId(id),
+        });
+        if (result.deletedCount === 0) {
+            return res
+                .status(404)
+                .send({ message: "Query not found or already deleted" });
         }
-        res.status(200).send({message:"Query Deleted Successfully"});
+        res.status(200).send({ message: "Query Deleted Successfully" });
     } catch (err) {
         console.error(err);
         res.status(500).send({ message: "Internal Server Error" });
     }
-})
+});
 
-
-app.post("/api/add-recommendation",async(req,res)=>{
-    const {recommendationData} = req.body;
-    if(!recommendationData){
-        return res.status(400).send({message:"No RecommendationData Found"})
+app.post("/api/add-recommendation", async (req, res) => {
+    const { recommendationData } = req.body;
+    if (!recommendationData) {
+        return res.status(400).send({ message: "No RecommendationData Found" });
     }
-    console.log(recommendationData.q)
     try {
-        const result = await recommendationCollection.insertOne(recommendationData);
+        const result = await recommendationCollection.insertOne(
+            recommendationData
+        );
         await queriesCollection.updateOne(
-            {_id: new ObjectId(recommendationData.queryId)},
-            {$inc : {recommendationCount : 1}}
-        )
-        res.status(201).send({message: "Recommendation Added Successfully",insertedId: result.insertedId})
+            { _id: new ObjectId(recommendationData.queryId) },
+            { $inc: { recommendationCount: 1 } }
+        );
+        res.status(201).send({
+            message: "Recommendation Added Successfully",
+            insertedId: result.insertedId,
+        });
     } catch (err) {
-        console.error(err)
+        console.error(err);
         res.status(500).send({ message: "Internal Server Error" });
     }
-})
+});
 
-app.get("/api/recommendations/:queryId",async(req,res)=>{
-    const {queryId} = req.params;
+app.get("/api/recommendations/:queryId", async (req, res) => {
+    const { queryId } = req.params;
     console.log(queryId);
     try {
-        const result  = await recommendationCollection.find({queryId}).toArray();
-        res.send(result)
-    } catch (err) {
-        console.error(err);
-        res.status(500).send({message: "Internal Server Error"});
-    }
-})
-
-app.get("/api/my-recommendations/:email",async(req,res)=>{
-    const {email} = req.params;
-    console.log(email)
-    try {
-        const result = await recommendationCollection.find({recommenderEmail:email}).toArray();
+        const result = await recommendationCollection
+            .find({ queryId })
+            .toArray();
         res.send(result);
-        
     } catch (err) {
         console.error(err);
-        res.status(500).send({message: "Internal Server Error"});
+        res.status(500).send({ message: "Internal Server Error" });
     }
-})
+});
+
+app.get("/api/my-recommendations/:email", async (req, res) => {
+    const { email } = req.params;
+    try {
+        const result = await recommendationCollection
+            .find({ recommenderEmail: email })
+            .toArray();
+        res.send(result);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+});
+
+app.delete("/api/delete-rec/:id/:queryId", async(req, res) => {
+    const { id,queryId } = req.params;
+    try {
+        const result = await recommendationCollection.deleteOne({
+            _id: new ObjectId(id),
+        });
+        if (result.deletedCount === 0) {
+            return res.status(404).send({ message: "Query not found or already deleted" });
+        }
+        await queriesCollection.updateOne(
+            { _id: new ObjectId(queryId) },
+            { $inc: { recommendationCount: -1 } }
+        );
+        res.status(200).send({ message: "Query Deleted Successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
