@@ -117,6 +117,21 @@ app.put("/api/update/:id", async (req, res) => {
     }
 });
 
+app.delete("/api/delete/:id",async(req,res)=>{
+    const {id} = req.params;
+
+    try {
+        const result = await queriesCollection.deleteOne({_id: new ObjectId(id)});
+        if(result.deletedCount === 0){
+            return res.status(404).send({ message: "Query not found or already deleted" });
+        }
+        res.status(200).send({message:"Query Deleted Successfully"});
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+})
+
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
 });
