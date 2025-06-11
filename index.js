@@ -182,6 +182,19 @@ app.get("/api/recommendations/:queryId",async(req,res)=>{
     }
 })
 
+app.get("/api/my-recommendations/:email",async(req,res)=>{
+    const {email} = req.params;
+    console.log(email)
+    try {
+        const result = await recommendationCollection.find({recommenderEmail:email}).toArray();
+        res.send(result);
+        
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({message: "Internal Server Error"});
+    }
+})
+
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
 });
