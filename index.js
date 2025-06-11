@@ -38,60 +38,84 @@ async function run() {
 }
 run().catch(console.dir);
 
-
 app.post("/api/add-query", async (req, res) => {
     try {
         const { queryData } = req.body;
         const result = await queriesCollection.insertOne(queryData);
-        if(!queryData){
-            res.status(400).send({message:"No queryData found"});
+        if (!queryData) {
+            res.status(400).send({ message: "No queryData found" });
         }
-        res.status(201).send({message: "Query Inserted",insertedId: result.insertedId,});
+        res.status(201).send({
+            message: "Query Inserted",
+            insertedId: result.insertedId,
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send({ message: "Internal Server Error" });
     }
 });
 
-app.get("/api/queries",async(req,res)=>{
+app.get("/api/queries", async (req, res) => {
     try {
         const query = await queriesCollection.find({}).toArray();
         res.send(query);
     } catch (err) {
         console.error(err);
-        res.status(500).send({message:"Internel Server Error"});
+        res.status(500).send({ message: "Internel Server Error" });
     }
-    
-})
+});
 
-app.get("/api/my-queries",async(req,res)=>{
-    const {email} = req.query;
-    if(!email){
-        return res.status(400).send({message:"Email query required"});
+app.get("/api/my-queries", async (req, res) => {
+    const { email } = req.query;
+    if (!email) {
+        return res.status(400).send({ message: "Email query required" });
     }
 
     try {
-        const myQueries = await queriesCollection.find({userEmail:email}).toArray();
+        const myQueries = await queriesCollection
+            .find({ userEmail: email })
+            .toArray();
         res.send(myQueries);
     } catch (err) {
         console.error(err);
-        res.status(500).send({message:"Internel Server Error"});
+        res.status(500).send({ message: "Internel Server Error" });
     }
-})
+});
 
-app.get("/api/update/:id",async(req,res)=>{
-    const {id} = req.params;
+app.get("/api/update/:id", async (req, res) => {
+    const { id } = req.params;
     try {
-        const query = await queriesCollection.findOne({_id: new ObjectId(id)});
-        if(!query){
-            return res.status(404).send({ message: "Query not found" })
+        const query = await queriesCollection.findOne({
+            _id: new ObjectId(id),
+        });
+        if (!query) {
+            return res.status(404).send({ message: "Query not found" });
         }
         res.send(query);
     } catch (err) {
         console.error(err);
-        res.status(500).send({message:"Internel Server Error"})
+        res.status(500).send({ message: "Internel Server Error" });
     }
-})
+});
+
+app.put("/api/update/:id", async (req, res) => {
+    const { id } = req.params;
+    const { updatedQuery } = req.body;
+
+    try {
+        const result = await queriesCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updatedQuery }
+        );
+        if (result.modifiedCount == 0) {
+            return res.status(404).send({ message: "Query not updated" });
+        }
+        res.send({ message: "Query updated successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Internel Server Error" });
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
