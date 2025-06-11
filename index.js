@@ -23,6 +23,7 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 
 let database;
 let queriesCollection;
+let recommendationCollection;
 
 async function run() {
     try {
@@ -32,6 +33,7 @@ async function run() {
         );
         database = await client.db("recommendo");
         queriesCollection = database.collection("queries");
+        recommendationCollection = database.collection("recommendations");
     } catch (err) {
         console.log("Database Error : ", err);
     }
@@ -39,12 +41,12 @@ async function run() {
 run().catch(console.dir);
 
 app.post("/api/add-query", async (req, res) => {
-    try {
-        const { queryData } = req.body;
-        const result = await queriesCollection.insertOne(queryData);
-        if (!queryData) {
+    const { queryData } = req.body;
+    if (!queryData) {
             res.status(400).send({ message: "No queryData found" });
         }
+    try {
+        const result = await queriesCollection.insertOne(queryData);
         res.status(201).send({
             message: "Query Inserted",
             insertedId: result.insertedId,
@@ -128,6 +130,26 @@ app.delete("/api/delete/:id",async(req,res)=>{
         res.status(200).send({message:"Query Deleted Successfully"});
     } catch (err) {
         console.error(err);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+})
+
+
+app.post("/api/add-recommendation",async(req,res)=>{
+    const {recommendationData} = req.body;
+    if(!recommendationData){
+        return res.status(400).send({message:"No RecommendationData Found"})
+    }
+    console.log(recommendationData.q)
+    try {
+        const result = await recommendationCollection.insertOne(recommendationData);
+        await queriesCollection.updateOne(
+            {_id: new ObjectId(recommendationData.queryId)},
+            {$inc : {recommendationCount : 1}}
+        )
+        res.status(201).send({message: "Recommendation Added Successfully",insertedId: result.insertedId})
+    } catch (err) {
+        console.error(err)
         res.status(500).send({ message: "Internal Server Error" });
     }
 })
