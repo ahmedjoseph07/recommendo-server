@@ -2,15 +2,32 @@ const express = require("express");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+var admin = require("firebase-admin");
+
+const decodedFirebaseKey = Buffer.from(process.env.FB_SERVICE_KEY,'base64').toString('utf-8')
+var serviceAccount = JSON.parse(decodedFirebaseKey);
+
 const app = express();
 
-app.use(cors());
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+});
+
+// Built-in Middlewares
+app.use(
+    cors({
+        origin: ["http://localhost:5173","https://recommendo-91de5.web.app"],
+        credentials: true,
+    })
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send({ message: "Welcome to Recommendo Server" });
 });
 
+// DB Connection
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const client = new MongoClient(process.env.MONGODB_URI, {
@@ -35,13 +52,35 @@ async function run() {
         queriesCollection = database.collection("queries");
         recommendationCollection = database.collection("recommendations");
     } catch (err) {
-        console.log("Database Error : ", err);
+        console.error("Database Error : ", err);
     }
 }
 run().catch(console.dir);
 
-app.post("/api/add-query", async (req, res) => {
+
+// Middlewares
+const verifyJWT = async(req, res, next) => {
+    const token = req?.headers?.authorization?.split(" ")[1];
+    if (!token) {
+        return res.status(401).send({ message: "Unauthorized Access" });
+    }
+    try {
+        const decoded = await admin.auth().verifyIdToken(token);
+        req.tokenEmail = decoded.email
+        next()
+    } catch (err) {
+        console.error(err);
+        return res.status(401).send({ message: "Unauthorized Access" });
+    }
+};
+
+// Api Endpoints 
+app.post("/api/add-query",verifyJWT, async (req, res) => {
     const { queryData } = req.body;
+    const decodedEmail = req.tokenEmail;
+    if(decodedEmail != queryData.userEmail){
+        return res.status(403).send({ message: "Forbidden Access" });
+    }
     if (!queryData) {
         res.status(400).send({ message: "No queryData found" });
     }
@@ -67,8 +106,14 @@ app.get("/api/queries", async (req, res) => {
     }
 });
 
-app.get("/api/my-queries", async (req, res) => {
+app.get("/api/my-queries", verifyJWT, async (req, res) => {
+    const decodedEmail = req.tokenEmail;
     const { email } = req.query;
+
+    if (decodedEmail !== email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+    }
+
     if (!email) {
         return res.status(400).send({ message: "Email query required" });
     }
@@ -203,14 +248,16 @@ app.get("/api/my-recommendations/:email", async (req, res) => {
     }
 });
 
-app.delete("/api/delete-rec/:id/:queryId", async(req, res) => {
-    const { id,queryId } = req.params;
+app.delete("/api/delete-rec/:id/:queryId", async (req, res) => {
+    const { id, queryId } = req.params;
     try {
         const result = await recommendationCollection.deleteOne({
             _id: new ObjectId(id),
         });
         if (result.deletedCount === 0) {
-            return res.status(404).send({ message: "Query not found or already deleted" });
+            return res
+                .status(404)
+                .send({ message: "Query not found or already deleted" });
         }
         await queriesCollection.updateOne(
             { _id: new ObjectId(queryId) },
@@ -223,33 +270,37 @@ app.delete("/api/delete-rec/:id/:queryId", async(req, res) => {
     }
 });
 
-app.get("/api/recommended",async(req,res)=>{
-    const {userEmail} = req.query;
-    if(!userEmail){
-        return res.status(400).send({message:"User Email Not Found"})
+app.get("/api/recommended", async (req, res) => {
+    const { userEmail } = req.query;
+    if (!userEmail) {
+        return res.status(400).send({ message: "User Email Not Found" });
     }
     try {
-        const userQueries = await queriesCollection.find({userEmail}).toArray();
+        const userQueries = await queriesCollection
+            .find({ userEmail })
+            .toArray();
 
         const results = await Promise.all(
-            userQueries.map(async(query)=>{
-                const recommendations = await recommendationCollection.find({queryId:query._id.toString()}).toArray();
+            userQueries.map(async (query) => {
+                const recommendations = await recommendationCollection
+                    .find({ queryId: query._id.toString() })
+                    .toArray();
                 return {
                     queryTitle: query.queryTitle,
                     productName: query.productName,
                     productBrand: query.productBrand,
                     queryId: query._id,
                     recommendations,
-                }
+                };
             })
         );
         res.send(results);
-        
     } catch (err) {
         console.error(err);
-        res.status(500).send({message: "Internal Server Error"});
+        res.status(500).send({ message: "Internal Server Error" });
     }
-})
+});
+
 
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
