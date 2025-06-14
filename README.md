@@ -7,7 +7,7 @@ Recommendo is a backend REST API built with **Node.js**, **Express**, **MongoDB*
 ## 🔗 Live URL
 
 - **Client**: [https://recommendo-91de5.web.app](https://recommendo-91de5.web.app)
-- **Server**: [http://localhost:3000](http://localhost:3000)
+- **Server**: [https://recommendo-server-eight.vercel.app](https://recommendo-server-eight.vercel.app)
 
 ---
 
