@@ -5,7 +5,10 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 var admin = require("firebase-admin");
 
-const decodedFirebaseKey = Buffer.from(process.env.FB_SERVICE_KEY,'base64').toString('utf-8')
+const decodedFirebaseKey = Buffer.from(
+    process.env.FB_SERVICE_KEY,
+    "base64"
+).toString("utf-8");
 var serviceAccount = JSON.parse(decodedFirebaseKey);
 
 const app = express();
@@ -17,7 +20,7 @@ admin.initializeApp({
 // Built-in Middlewares
 app.use(
     cors({
-        origin: ["http://localhost:5173","https://recommendo-91de5.web.app"],
+        origin: ["http://localhost:5173", "https://recommendo-91de5.web.app"],
         credentials: true,
     })
 );
@@ -38,47 +41,48 @@ const client = new MongoClient(process.env.MONGODB_URI, {
     },
 });
 
-let database;
-let queriesCollection;
-let recommendationCollection;
+// let database;
+// let queriesCollection;
+// let recommendationCollection;
 
-async function run() {
-    try {
-        await client.db("admin").command({ ping: 1 });
-        console.log(
-            "Pinged your deployment. You successfully connected to MongoDB!"
-        );
-        database = await client.db("recommendo");
-        queriesCollection = database.collection("queries");
-        recommendationCollection = database.collection("recommendations");
-    } catch (err) {
-        console.error("Database Error : ", err);
-    }
-}
-run().catch(console.dir);
+// async function run() {
+//     try {
+//         await client.db("admin").command({ ping: 1 });
+//         console.log(
+//             "Pinged your deployment. You successfully connected to MongoDB!"
+//         );
+        
+//     } catch (err) {
+//         console.error("Database Error : ", err);
+//     }
+// }
+// run().catch(console.dir);
 
+const database = client.db("recommendo");
+const queriesCollection = database.collection("queries");
+const recommendationCollection = database.collection("recommendations");
 
 // Middlewares
-const verifyJWT = async(req, res, next) => {
+const verifyJWT = async (req, res, next) => {
     const token = req?.headers?.authorization?.split(" ")[1];
     if (!token) {
         return res.status(401).send({ message: "Unauthorized Access" });
     }
     try {
         const decoded = await admin.auth().verifyIdToken(token);
-        req.tokenEmail = decoded.email
-        next()
+        req.tokenEmail = decoded.email;
+        next();
     } catch (err) {
         console.error(err);
         return res.status(401).send({ message: "Unauthorized Access" });
     }
 };
 
-// Api Endpoints 
-app.post("/api/add-query",verifyJWT, async (req, res) => {
+// Api Endpoints
+app.post("/api/add-query", verifyJWT, async (req, res) => {
     const { queryData } = req.body;
     const decodedEmail = req.tokenEmail;
-    if(decodedEmail != queryData.userEmail){
+    if (decodedEmail != queryData.userEmail) {
         return res.status(403).send({ message: "Forbidden Access" });
     }
     if (!queryData) {
@@ -300,7 +304,6 @@ app.get("/api/recommended", async (req, res) => {
         res.status(500).send({ message: "Internal Server Error" });
     }
 });
-
 
 app.listen(port, () => {
     console.log(`Server Running on port ${port}`);
