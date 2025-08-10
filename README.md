@@ -24,7 +24,6 @@ Recommendo is a backend REST API built with **Node.js**, **Express**, **MongoDB*
 ## 🛠️ Environment Variables (`.env`)
 
 ```env
-PORT=3000
 MONGODB_URI=your_mongodb_connection_string
 FB_SERVICE_KEY=your_base64_encoded_firebase_service_key
 RESEND_API_KEY=your_resend_api_key
