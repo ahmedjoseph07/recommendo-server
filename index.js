@@ -4,6 +4,7 @@ const port = process.env.PORT || 3000;
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 var admin = require("firebase-admin");
+const { Resend } = require("resend");
 
 const decodedFirebaseKey = Buffer.from(
     process.env.FB_SERVICE_KEY,
@@ -16,6 +17,8 @@ const app = express();
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
 });
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Built-in Middlewares
 app.use(
@@ -51,7 +54,7 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 //         console.log(
 //             "Pinged your deployment. You successfully connected to MongoDB!"
 //         );
-        
+
 //     } catch (err) {
 //         console.error("Database Error : ", err);
 //     }
@@ -302,6 +305,31 @@ app.get("/api/recommended", async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send({ message: "Internal Server Error" });
+    }
+});
+
+app.post("/api/feedback", async (req, res) => {
+    const { email, message } = req.body;
+
+    if (!email || !message) {
+        return res
+            .status(400)
+            .json({ error: "Email and message are required" });
+    }
+
+    try {
+        await resend.emails.send({
+            from: "onboarding@resend.dev",
+            to: "ahmedjoseph11@gmail.com",
+            subject: "New Feedback Received",
+            text: `Feedback from: ${email}\n\nMessage:\n${message}`,
+            reply_to: email,
+        });
+
+        return res.json({ message: "Feedback sent successfully" });
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return res.status(500).json({ error: "Failed to send feedback" });
     }
 });
 
